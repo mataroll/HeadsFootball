@@ -1,0 +1,8 @@
+{
+  "powerups": [
+    "speed_boost",
+    "freeze",
+    "big_goal",
+    "multiball"
+  ]
+}
