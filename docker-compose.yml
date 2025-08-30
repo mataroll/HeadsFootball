@@ -1,0 +1,79 @@
+version: "3.9"
+services:
+  client:
+    build:
+      context: ./
+      dockerfile: ./infrastructure/docker/Dockerfile.client
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app/client
+    depends_on:
+      - server
+    environment:
+      - VITE_SERVER_URL=http://localhost:8080
+
+  server:
+    build:
+      context: ./
+      dockerfile: ./infrastructure/docker/Dockerfile.server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app/server
+    environment:
+      - DATABASE_URL=${POSTGRES_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CORS_ORIGIN=http://localhost:5173
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      - postgres
+      - redis
+
+  ai-service:
+    build:
+      context: ./
+      dockerfile: ./infrastructure/docker/Dockerfile.ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app/ai-service
+
+  matchmaker:
+    image: node:20-alpine
+    working_dir: /app/matchmaker
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./matchmaker:/app/matchmaker
+    ports:
+      - "8090:8090"
+    depends_on:
+      - server
+      - redis
+
+  analytics:
+    image: node:20-alpine
+    working_dir: /app/analytics
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./analytics:/app/analytics
+    ports:
+      - "8091:8091"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sportsheads
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
